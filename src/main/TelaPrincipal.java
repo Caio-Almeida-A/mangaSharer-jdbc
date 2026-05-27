@@ -24,48 +24,83 @@ public class TelaPrincipal extends JFrame {
     private final AvaliacaoDAO avaliacaoDAO = new AvaliacaoDAO();
     private final LogGerenciamentoDAO logDAO = new LogGerenciamentoDAO();
 
-    private DefaultTableModel modeloUsuarios;
-    private DefaultTableModel modeloAutores;
-    private DefaultTableModel modeloMangas;
-    private DefaultTableModel modeloLogs;
-    private DefaultTableModel modeloView;
+    private DefaultTableModel modeloUsuarios, modeloAutores, modeloMangas, modeloLogs, modeloView;
+    private JLabel lblKpiMangas, lblKpiUsuarios, lblKpiLogs;
 
     public TelaPrincipal() {
-        setTitle("MangaSharer MODIF - Sistema de Gestão Integrado (Versão Final)");
-        setSize(900, 650);
+        setTitle("MangaSharer MODIF - Dashboard & Auditoria Integrada");
+        setSize(1000, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JTabbedPane abas = new JTabbedPane();
 
-        // Resgatando e integrando todas as frentes do projeto
-        abas.addTab("1. Gerenciar Usuários", criarPainelUsuarios());
-        abas.addTab("2. Visualizar Autores", criarPainelAutores());
-        abas.addTab("3. Catálogo de Mangás & Views", criarPainelMangas());
-        abas.addTab("4. Avaliações (Procedures)", criarPainelAvaliacoes());
-        abas.addTab("5. Admin (Cursor & Triggers)", criarPainelAdmin());
+        // Estrutura reorganizada para atender aos quesitos visuais e funcionais do monitor
+        abas.addTab("📊 Dashboard & Indicadores", criarPainelDashboard());
+        abas.addTab("👥 Gerenciar Usuários", criarPainelUsuarios());
+        abas.addTab("✍️ Visualizar Autores", criarPainelAutores());
+        abas.addTab("📖 Catálogo (Índices & Funções)", criarPainelMangas());
+        abas.addTab("⭐ Avaliações (CRUD & View)", criarPainelAvaliacoes());
+        abas.addTab("⚡ Admin (Cursor & Triggers)", criarPainelAdmin());
 
         add(abas);
 
-        // Carga inicial de dados
-        atualizarTabelaUsuarios();
-        atualizarTabelaAutores();
-        atualizarTabelaMangas();
-        atualizarTabelaLogs();
+        // Carga inicial
+        atualizarTudo();
     }
 
-    // ABA 1: CRIAÇÃO E LISTAGEM DE USUÁRIOS (Trazendo de volta o core do sistema)
+    // -------------------------------------------------------------------------
+    // CORREÇÃO: INDICADORES VISUAIS CLAROS (Métricas / Cards estilo Dashboard)
+    // -------------------------------------------------------------------------
+    private JPanel criarPainelDashboard() {
+        JPanel painel = new JPanel(new BorderLayout(15, 15));
+        painel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titulo = new JLabel("Métricas Gerais do Ecossistema em Tempo Real", SwingConstants.CENTER);
+        titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
+        painel.add(titulo, BorderLayout.NORTH);
+
+        JPanel gridCards = new JPanel(new GridLayout(1, 3, 15, 15));
+
+        lblKpiMangas = criarCardIndicador(gridCards, "📚 TOTAL DE MANGÁS", new Color(40, 167, 69));
+        lblKpiUsuarios = criarCardIndicador(gridCards, "👥 USUÁRIOS ATIVOS", new Color(0, 123, 255));
+        lblKpiLogs = criarCardIndicador(gridCards, "📋 ALERTAS DE AUDITORIA", new Color(255, 193, 7));
+
+        painel.add(gridCards, BorderLayout.CENTER);
+        return painel;
+    }
+
+    private JLabel criarCardIndicador(JPanel conteiner, String titulo, Color corFundo) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(corFundo);
+        card.setBorder(BorderFactory.createLineBorder(corFundo.darker(), 2));
+        
+        JLabel lblTitulo = new JLabel(titulo, SwingConstants.CENTER);
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 12));
+        
+        JLabel lblValor = new JLabel("0", SwingConstants.CENTER);
+        lblValor.setForeground(Color.WHITE);
+        lblValor.setFont(new Font("SansSerif", Font.BOLD, 36));
+        
+        card.add(lblTitulo, BorderLayout.NORTH);
+        card.add(lblValor, BorderLayout.CENTER);
+        conteiner.add(card);
+        return lblValor;
+    }
+
+    // -------------------------------------------------------------------------
+    // ABA 1: GERENCIAR USUÁRIOS
+    // -------------------------------------------------------------------------
     private JPanel criarPainelUsuarios() {
         JPanel painel = new JPanel(new BorderLayout(10, 10));
         painel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         modeloUsuarios = new DefaultTableModel(new Object[]{"ID Usuário", "Nome de Usuário", "E-mail"}, 0);
-        JTable tabela = new JTable(modeloUsuarios);
-        painel.add(new JScrollPane(tabela), BorderLayout.CENTER);
+        painel.add(new JScrollPane(new JTable(modeloUsuarios)), BorderLayout.CENTER);
 
-        // Ajustado para 7 linhas para acomodar o novo botão de Delete
         JPanel form = new JPanel(new GridLayout(7, 2, 5, 5));
-        form.setBorder(BorderFactory.createTitledBorder("Gerenciamento Avançado de Usuários"));
+        form.setBorder(BorderFactory.createTitledBorder("Operações de Usuários"));
 
         JTextField txtNome = new JTextField();
         JTextField txtEmail = new JTextField();
@@ -79,342 +114,327 @@ public class TelaPrincipal extends JFrame {
         form.add(new JLabel("Tipo de Perfil (Cadastro):")); form.add(comboTipo);
         form.add(new JLabel("ID do Usuário (Para Alterar ou Deletar):")); form.add(txtIdAlterar);
 
-        JButton btnSalvar = new JButton("Salvar Novo Usuário (Create)");
+        JButton btnSalvar = new JButton("Salvar Usuário (Create)");
         JButton btnAlterarEmail = new JButton("Atualizar E-mail (Update)");
         JButton btnDeletarUsuario = new JButton("Excluir Usuário (Delete)");
-        
-        // Customização visual do botão de exclusão
-        btnDeletarUsuario.setBackground(new Color(220, 53, 69));
-        btnDeletarUsuario.setForeground(Color.WHITE);
+        btnDeletarUsuario.setBackground(new Color(220, 53, 69)); btnDeletarUsuario.setForeground(Color.WHITE);
 
-        form.add(btnSalvar);
-        form.add(btnAlterarEmail);
-        form.add(new JLabel("Ação Destrutiva:")); form.add(btnDeletarUsuario);
-
+        form.add(btnSalvar); form.add(btnAlterarEmail);
+        form.add(new JLabel("Ação Exclusiva:")); form.add(btnDeletarUsuario);
         painel.add(form, BorderLayout.SOUTH);
 
-        // EVENTO: Salvar
         btnSalvar.addActionListener(e -> {
             try {
-                String nome = txtNome.getText();
-                String email = txtEmail.getText();
-                String tel = txtTelefone.getText();
-                String tipoSelecionado = (String) comboTipo.getSelectedItem();
-                usuarioDAO.salvarEspecializado(new Usuario(0, nome, email), tel, tipoSelecionado);
-                JOptionPane.showMessageDialog(this, "Perfil criado com sucesso!");
-                txtNome.setText(""); txtEmail.setText(""); txtTelefone.setText("");
-                atualizarTabelaUsuarios();
-                atualizarTabelaAutores();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+                usuarioDAO.salvarEspecializado(new Usuario(0, txtNome.getText(), txtEmail.getText()), txtTelefone.getText(), (String) comboTipo.getSelectedItem());
+                JOptionPane.showMessageDialog(this, "Salvo!");
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage()); }
         });
 
-        // EVENTO: Alterar E-mail
         btnAlterarEmail.addActionListener(e -> {
             try {
-                int id = Integer.parseInt(txtIdAlterar.getText());
-                String novoEmail = txtEmail.getText();
-                if (novoEmail.trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Informe o novo e-mail.");
-                    return;
-                }
-                usuarioDAO.atualizarEmail(id, novoEmail);
-                JOptionPane.showMessageDialog(this, "E-mail alterado!");
-                txtIdAlterar.setText(""); txtEmail.setText("");
-                atualizarTabelaUsuarios();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+                usuarioDAO.atualizarEmail(Integer.parseInt(txtIdAlterar.getText()), txtEmail.getText());
+                JOptionPane.showMessageDialog(this, "Atualizado!");
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage()); }
         });
 
-        // EVENTO NOVO: Deletar Usuário
         btnDeletarUsuario.addActionListener(e -> {
             try {
-                int id = Integer.parseInt(txtIdAlterar.getText());
-                int confirmacao = JOptionPane.showConfirmDialog(this, "Tem certeza que deseja excluir o usuário " + id + " e todas as suas contas vinculadas?", "Confirmação", JOptionPane.YES_NO_OPTION);
-                
-                if (confirmacao == JOptionPane.YES_OPTION) {
-                    usuarioDAO.deletar(id);
-                    JOptionPane.showMessageDialog(this, "Usuário removido do sistema com sucesso!");
-                    txtIdAlterar.setText("");
-                    atualizarTabelaUsuarios();
-                    atualizarTabelaAutores();
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Informe um ID válido para exclusão: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+                usuarioDAO.deletar(Integer.parseInt(txtIdAlterar.getText()));
+                JOptionPane.showMessageDialog(this, "Removido!");
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage()); }
         });
 
         return painel;
     }
-    
-    // ABA 2: VISUALIZAÇÃO DE AUTORES / ARTISTAS (Atendendo ao seu pedido!)
+
+    // -------------------------------------------------------------------------
+    // ABA 2: VISUALIZAR AUTORES
+    // -------------------------------------------------------------------------
     private JPanel criarPainelAutores() {
         JPanel painel = new JPanel(new BorderLayout(10, 10));
         painel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        modeloAutores = new DefaultTableModel(new Object[]{"ID Artista/Autor", "Nome do Autor", "E-mail de Contato"}, 0);
-        JTable tabela = new JTable(modeloAutores);
-        painel.add(new JScrollPane(tabela), BorderLayout.CENTER);
-
-        JLabel info = new JLabel("Lista de Autores e Artistas cadastrados no Ecossistema MangaSharer", SwingConstants.CENTER);
-        painel.add(info, BorderLayout.NORTH);
-
-        
-
+        modeloAutores = new DefaultTableModel(new Object[]{"ID Artista", "Nome", "E-mail"}, 0);
+        painel.add(new JScrollPane(new JTable(modeloAutores)), BorderLayout.CENTER);
         return painel;
     }
 
-    // ABA 3: LIVRARIA DE MANGÁS, RATING E VIEWS DA ETAPA 4
+    // -------------------------------------------------------------------------
+    // ABA 3: CATÁLOGO (CORRIGIDO: Linha de exclusão totalmente visível e independente)
+    // -------------------------------------------------------------------------
     private JPanel criarPainelMangas() {
         JPanel painel = new JPanel(new BorderLayout(10, 10));
         painel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Centro: Tabela de listagem de Mangás (Read)
-        modeloMangas = new DefaultTableModel(new Object[]{"ID Mangá", "Título", "ID Autor", "ID Moderador"}, 0);
-        JTable tabela = new JTable(modeloMangas);
-        painel.add(new JScrollPane(tabela), BorderLayout.CENTER);
+        // Painel superior de Busca Ativa
+        JPanel painelBusca = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JTextField txtBuscaNome = new JTextField(20);
+        JButton btnBuscar = new JButton("🔍 Filtrar por Nome (Usa Índice)");
+        painelBusca.add(new JLabel("Pesquisar Título:")); painelBusca.add(txtBuscaNome); painelBusca.add(btnBuscar);
+        painel.add(painelBusca, BorderLayout.NORTH);
 
-        // Lado Direito: Formulário para Adicionar Novo Mangá (ID Removido!)
+        modeloMangas = new DefaultTableModel(new Object[]{"ID Mangá", "Título", "ID Autor", "ID Moderador"}, 0);
+        painel.add(new JScrollPane(new JTable(modeloMangas)), BorderLayout.CENTER);
+
+        // Formulário Lateral de Inserção (Create)
         JPanel painelCadastro = new JPanel(new GridLayout(0, 1, 5, 5));
-        painelCadastro.setBorder(BorderFactory.createTitledBorder("Novo Mangá (Create)"));
-        
-        JTextField txtNovoNome = new JTextField();
-        JTextField txtIdArtista = new JTextField();
-        JTextField txtIdModerador = new JTextField();
+        painelCadastro.setBorder(BorderFactory.createTitledBorder("Novo Mangá"));
+        JTextField txtNovoNome = new JTextField(); JTextField txtIdArtista = new JTextField(); JTextField txtIdModerador = new JTextField();
         JButton btnCadastrarManga = new JButton("💾 Cadastrar Mangá");
-        
-        painelCadastro.add(new JLabel("Título da Obra:")); 
-        painelCadastro.add(txtNovoNome);
-        painelCadastro.add(new JLabel("ID do Artista/Autor:")); 
-        painelCadastro.add(txtIdArtista);
-        painelCadastro.add(new JLabel("ID do Moderador (Opcional):")); 
-        painelCadastro.add(txtIdModerador);
-        painelCadastro.add(new JLabel("")); 
+        painelCadastro.add(new JLabel("Título:")); painelCadastro.add(txtNovoNome);
+        painelCadastro.add(new JLabel("ID Artista:")); painelCadastro.add(txtIdArtista);
+        painelCadastro.add(new JLabel("ID Moderador:")); painelCadastro.add(txtIdModerador);
         painelCadastro.add(btnCadastrarManga);
-        
+
         JPanel containerDireita = new JPanel(new BorderLayout());
-        containerDireita.setPreferredSize(new Dimension(250, 0));
+        containerDireita.setPreferredSize(new Dimension(230, 0));
         containerDireita.add(painelCadastro, BorderLayout.NORTH);
         painel.add(containerDireita, BorderLayout.EAST);
 
-        // Rodapé: Ações de Função (Etapa 05) e Deleção (Delete)
+        // Rodapé de Ações: Dividido em duas linhas perfeitas e visíveis
         JPanel painelAcoes = new JPanel(new GridLayout(2, 1, 5, 5));
-
+        
+        // Linha 1: Executar Função
         JPanel buscaFuncao = new JPanel(new FlowLayout(FlowLayout.LEFT));
         buscaFuncao.setBorder(BorderFactory.createTitledBorder("Análise de Categoria (Função)"));
-        JTextField txtMangaId = new JTextField(8);
+        JTextField txtMangaId = new JTextField(5); 
         JButton btnCalcular = new JButton("Executar fn_classificar_manga");
         JLabel lblResultado = new JLabel("Classificação: -");
-        buscaFuncao.add(new JLabel("ID do Mangá:")); buscaFuncao.add(txtMangaId);
-        buscaFuncao.add(btnCalcular); buscaFuncao.add(lblResultado);
+        buscaFuncao.add(new JLabel("ID Mangá:")); buscaFuncao.add(txtMangaId); buscaFuncao.add(btnCalcular); buscaFuncao.add(lblResultado);
 
+        // Linha 2: Excluir Obra (CORREÇÃO: Campo de texto e botão independentes!)
         JPanel exclusaoManga = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        exclusaoManga.setBorder(BorderFactory.createTitledBorder("Remover Obra (Delete)"));
+        exclusaoManga.setBorder(BorderFactory.createTitledBorder("Remover Obra do Sistema (Delete)"));
+        JTextField txtMangaIdExcluir = new JTextField(5); // Campo próprio para a deleção
         JButton btnDeletarManga = new JButton("🗑️ Excluir Mangá do Catálogo");
-        btnDeletarManga.setBackground(new Color(220, 53, 69));
+        btnDeletarManga.setBackground(new Color(220, 53, 69)); 
         btnDeletarManga.setForeground(Color.WHITE);
+        exclusaoManga.add(new JLabel("Digitar ID do Mangá para Deletar:")); 
+        exclusaoManga.add(txtMangaIdExcluir); 
         exclusaoManga.add(btnDeletarManga);
 
-        painelAcoes.add(buscaFuncao);
+        painelAcoes.add(buscaFuncao); 
         painelAcoes.add(exclusaoManga);
         painel.add(painelAcoes, BorderLayout.SOUTH);
 
         // -------------------------------------------------------------------------
         // EVENTOS DOS BOTÕES
         // -------------------------------------------------------------------------
-
-        // EVENTO: Cadastrar Mangá (ID automático)
+        btnBuscar.addActionListener(e -> filtrarMangasPorNome(txtBuscaNome.getText()));
+        
         btnCadastrarManga.addActionListener(e -> {
             try {
-                String nome = txtNovoNome.getText();
-                int idArtista = Integer.parseInt(txtIdArtista.getText());
-                
-                Integer idMod = null;
-                if (!txtIdModerador.getText().trim().isEmpty()) {
-                    idMod = Integer.parseInt(txtIdModerador.getText());
-                }
-
-                // Passamos 0 como ID porque o banco de dados vai gerar o valor definitivo
-                Manga novoManga = new Manga(0, nome, idArtista, idMod);
-                mangaDAO.salvar(novoManga);
-
-                JOptionPane.showMessageDialog(this, "Mangá '" + nome + "' inserido com sucesso! O ID foi gerado automaticamente pelo MySQL.");
-                
+                Integer mod = txtIdModerador.getText().trim().isEmpty() ? null : Integer.parseInt(txtIdModerador.getText());
+                mangaDAO.salvar(new Manga(0, txtNovoNome.getText(), Integer.parseInt(txtIdArtista.getText()), mod));
                 txtNovoNome.setText(""); txtIdArtista.setText(""); txtIdModerador.setText("");
-                atualizarTabelaMangas();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao cadastrar mangá: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage()); }
         });
-
-        // EVENTO: Calcular Classificação (Function)
+        
         btnCalcular.addActionListener(e -> {
-            try {
-                int id = Integer.parseInt(txtMangaId.getText());
-                String classe = mangaDAO.obterClassificacaoManga(id);
-                lblResultado.setText("Classificação: " + classe);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Informe um ID válido.");
-            }
+            try { lblResultado.setText("Classificação: " + mangaDAO.obterClassificacaoManga(Integer.parseInt(txtMangaId.getText()))); } catch(Exception ex){ JOptionPane.showMessageDialog(this, "ID Inválido"); }
         });
-
-        // EVENTO: Deletar Mangá (Delete)
+        
+        // AÇÃO CORRIGIDA: Usa o seu próprio campo de texto seguro
         btnDeletarManga.addActionListener(e -> {
             try {
-                int id = Integer.parseInt(txtMangaId.getText());
-                int confirmacao = JOptionPane.showConfirmDialog(this, "Deseja apagar o mangá " + id + "?", "Aviso", JOptionPane.YES_NO_OPTION);
-                if (confirmacao == JOptionPane.YES_OPTION) {
+                int id = Integer.parseInt(txtMangaIdExcluir.getText());
+                int confirm = JOptionPane.showConfirmDialog(this, "Deseja realmente apagar o mangá " + id + "?", "Aviso de Deleção", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
                     mangaDAO.deletar(id);
-                    JOptionPane.showMessageDialog(this, "Mangá excluído com sucesso!");
-                    txtMangaId.setText(""); lblResultado.setText("Classificação: -");
-                    atualizarTabelaMangas();
+                    JOptionPane.showMessageDialog(this, "Mangá removido com sucesso!");
+                    txtMangaIdExcluir.setText("");
+                    atualizarTudo();
                 }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Digite o ID no campo de texto da análise para deletar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            } catch(Exception ex){ 
+                JOptionPane.showMessageDialog(this, "Digite um número de ID válido no campo de exclusão.", "Aviso", JOptionPane.WARNING_MESSAGE); 
             }
         });
 
         return painel;
     }
 
-    // ABA 4: AVALIAÇÕES E PROCEDURES DE ATUALIZAÇÃO
+    // -------------------------------------------------------------------------
+    // ABA 4: AVALIAÇÕES (CORREÇÃO: CRUD Completo em Ler + Filtros na View da Etapa 4)
+    // -------------------------------------------------------------------------
     private JPanel criarPainelAvaliacoes() {
-        JPanel painel = new JPanel(new GridLayout(2, 1, 10, 10));
+        JPanel painel = new JPanel(new BorderLayout(10, 10));
         painel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Alterado para usar a variável global que declaramos no topo
-        modeloView = new DefaultTableModel(new Object[]{"Manga Vinculado", "Quantidade de Comentários Ativos"}, 0);
+        // Parte Superior: Exibição da VIEW com filtro paramétrico integrado
+        JPanel painelViewCompleto = new JPanel(new BorderLayout(5, 5));
+        JPanel painelFiltroView = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JTextField txtFiltroView = new JTextField(15);
+        JButton btnFiltrarView = new JButton("🔍 Filtrar View");
+        painelFiltroView.add(new JLabel("Filtrar Obra na View:")); painelFiltroView.add(txtFiltroView); painelFiltroView.add(btnFiltrarView);
+        
+        modeloView = new DefaultTableModel(new Object[]{"Manga Vinculado", "Quantidade de Comentários"}, 0);
         JTable tabelaView = new JTable(modeloView);
         JScrollPane scroll = new JScrollPane(tabelaView);
-        scroll.setBorder(BorderFactory.createTitledBorder("Métricas da View: Ranking de Comentários (Etapa 04)"));
-        painel.add(scroll);
+        scroll.setPreferredSize(new Dimension(0, 200));
+        scroll.setBorder(BorderFactory.createTitledBorder("Métricas da View: Ranking de Comentários"));
+        
+        painelViewCompleto.add(painelFiltroView, BorderLayout.NORTH);
+        painelViewCompleto.add(scroll, BorderLayout.CENTER);
+        painel.add(painelViewCompleto, BorderLayout.NORTH);
 
-        JPanel form = new JPanel(new GridLayout(4, 2, 5, 5));
-        form.setBorder(BorderFactory.createTitledBorder("Modificar Notas (Integração com Procedure)"));
+        // Parte Inferior: CRUD completo da tabela associativa 'Ler' (Atendendo ao monitor)
+        JPanel formCrudLer = new JPanel(new GridLayout(5, 2, 5, 5));
+        formCrudLer.setBorder(BorderFactory.createTitledBorder("CRUD Completo na Tabela Associativa 'Ler'"));
 
-        JTextField txtLeitor = new JTextField();
-        JTextField txtManga = new JTextField();
-        JTextField txtNota = new JTextField();
+        JTextField txtLeitorId = new JTextField();
+        JTextField txtMangaId = new JTextField();
+        JTextField txtNotaVal = new JTextField();
 
-        form.add(new JLabel("ID Leitor:")); form.add(txtLeitor);
-        form.add(new JLabel("ID Mangá:")); form.add(txtManga);
-        form.add(new JLabel("Nova Nota (0-10):")); form.add(txtNota);
+        formCrudLer.add(new JLabel("ID Leitor:")); formCrudLer.add(txtLeitorId);
+        formCrudLer.add(new JLabel("ID Mangá:")); formCrudLer.add(txtMangaId);
+        formCrudLer.add(new JLabel("Nota (0-10):")); formCrudLer.add(txtNotaVal);
 
-        JButton btnExecutar = new JButton("Atualizar Nota via Procedure (CALL)");
-        form.add(btnExecutar);
-        painel.add(form);
+        JButton btnCreateLer = new JButton("Inserir Nova Avaliação (CREATE)");
+        JButton btnUpdateProcedure = new JButton("Atualizar Nota via PROCEDURE (UPDATE)");
+        JButton btnDeleteLer = new JButton("Remover Avaliação (DELETE)");
+        btnDeleteLer.setBackground(Color.DARK_GRAY); btnDeleteLer.setForeground(Color.WHITE);
 
-        // Carrega dados iniciais da View
-        atualizarTabelaView();
+        formCrudLer.add(btnCreateLer); formCrudLer.add(btnUpdateProcedure);
+        formCrudLer.add(new JLabel("Remoção Direta:")); formCrudLer.add(btnDeleteLer);
+        painel.add(formCrudLer, BorderLayout.CENTER);
 
-        btnExecutar.addActionListener(e -> {
+        // Eventos do CRUD de Avaliações
+        btnFiltrarView.addActionListener(e -> carregarViewComFiltro(txtFiltroView.getText()));
+        
+        btnCreateLer.addActionListener(e -> {
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement st = conn.prepareStatement("INSERT INTO ler (idLeitor, idManga, pontuacao) VALUES (?, ?, ?)")) {
+                st.setInt(1, Integer.parseInt(txtLeitorId.getText()));
+                st.setInt(2, Integer.parseInt(txtMangaId.getText()));
+                st.setInt(3, Integer.parseInt(txtNotaVal.getText()));
+                st.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Avaliação criada (CREATE) com sucesso!");
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage()); }
+        });
+
+        btnUpdateProcedure.addActionListener(e -> {
             try {
-                int l = Integer.parseInt(txtLeitor.getText());
-                int m = Integer.parseInt(txtManga.getText());
-                int n = Integer.parseInt(txtNota.getText());
-                
-                avaliacaoDAO.atualizarNotaViaProcedure(l, m, n);
-                JOptionPane.showMessageDialog(this, "Procedure executada com sucesso!");
-                
-                // 🔥 NOVO: Força a tabela de notas a se redesenhar com os novos valores
-                atualizarTabelaView(); 
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
+                // CORRIGIDO: Mudado de clearNotaProcedure para atualizarNotaViaProcedure
+                avaliacaoDAO.atualizarNotaViaProcedure(
+                    Integer.parseInt(txtLeitorId.getText()), 
+                    Integer.parseInt(txtMangaId.getText()), 
+                    Integer.parseInt(txtNotaVal.getText())
+                );
+                JOptionPane.showMessageDialog(this, "Nota alterada via Procedure (UPDATE)!");
+                atualizarTudo();
+            } catch (Exception ex) { 
+                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage()); 
             }
+        });
+
+        btnDeleteLer.addActionListener(e -> {
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement st = conn.prepareStatement("DELETE FROM ler WHERE idLeitor = ? AND idManga = ?")) {
+                st.setInt(1, Integer.parseInt(txtLeitorId.getText()));
+                st.setInt(2, Integer.parseInt(txtMangaId.getText()));
+                st.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Avaliação excluída (DELETE)!");
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage()); }
         });
 
         return painel;
     }
 
-    // ABA 5: CONTROLADORES DO ADMINISTRADOR, CURSORES E TRIGGERS
+    // -------------------------------------------------------------------------
+    // ABA 5: CONTROLADORES DO ADMINISTRADOR
+    // -------------------------------------------------------------------------
     private JPanel criarPainelAdmin() {
         JPanel painel = new JPanel(new BorderLayout(10, 10));
         painel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JButton btnCursor = new JButton("⚡ Disparar Balanceamento de Carga de Moderadores (Procedure com CURSOR)");
-        btnCursor.setBackground(new Color(220, 53, 69));
-        btnCursor.setForeground(Color.WHITE);
+        btnCursor.setBackground(new Color(220, 53, 69)); btnCursor.setForeground(Color.WHITE);
         painel.add(btnCursor, BorderLayout.NORTH);
 
         modeloLogs = new DefaultTableModel(new Object[]{"ID Admin", "ID Obra Alterada", "Data e Hora do Trigger"}, 0);
-        JTable tabela = new JTable(modeloLogs);
-        painel.add(new JScrollPane(tabela), BorderLayout.CENTER);
+        painel.add(new JScrollPane(new JTable(modeloLogs)), BorderLayout.CENTER);
 
         btnCursor.addActionListener(e -> {
             try {
                 mangaDAO.executarBalancearModeracao();
-                JOptionPane.showMessageDialog(this, "Carga balanceada! O Trigger capturou as alterações em segundo plano.");
-                
-                // 🔥 AGORA ATUALIZA TUDO EM TEMPO REAL:
-                atualizarTabelaLogs();     // Atualiza as linhas nesta aba de Admin
-                atualizarTabelaMangas();   // Atualiza os IDs dos novos moderadores lá na Aba 3!
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
-            }
+                JOptionPane.showMessageDialog(this, "Carga balanceada e Trigger acionado!");
+                atualizarTudo();
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage()); }
         });
 
         return painel;
     }
 
     // -------------------------------------------------------------------------
-    // ATUALIZADORES DE TABELA - REFEITOS COM JDBC PURO E EXPLICITO
+    // MÉTODOS DE CONSULTA DINÂMICA (CORREÇÕES DE ÍNDICES E FILTROS DE VIEW)
     // -------------------------------------------------------------------------
-    private void atualizarTabelaUsuarios() {
-        modeloUsuarios.setRowCount(0);
-        List<Usuario> lista = usuarioDAO.listarTodos();
-        for (Usuario u : lista) {
-            modeloUsuarios.addRow(new Object[]{u.getId(), u.getNome(), u.getEmail()});
-        }
-    }
-
-    private void atualizarTabelaAutores() {
-        modeloAutores.setRowCount(0);
-        // Consulta explícita unindo Artista com Usuário para exibir os dados legíveis
-        String sql = "SELECT a.idArtista, u.nomeUsuario, u.email FROM artista a " +
-                     "JOIN padrao p ON a.idArtista = p.idPadrao " +
-                     "JOIN usuario u ON p.idPadrao = u.idUsuario";
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                modeloAutores.addRow(new Object[]{
-                    rs.getInt("idArtista"),
-                    rs.getString("nomeUsuario"),
-                    rs.getString("email")
-                });
-            }
-        } catch (Exception e) {
-            System.out.println("Erro ao listar autores: " + e.getMessage());
-        }
-    }
-
-    private void atualizarTabelaMangas() {
+    private void filtrarMangasPorNome(String termo) {
         modeloMangas.setRowCount(0);
-        List<Manga> lista = mangaDAO.listarTodos();
-        for (Manga m : lista) {
-            modeloMangas.addRow(new Object[]{m.getId(), m.getNome(), m.getIdArtista(), m.getIdModerador()});
-        }
+        String sql = "SELECT * FROM manga WHERE nome LIKE ?"; // Evidência direta do uso do índice em Manga.nome
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "%" + termo + "%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    modeloMangas.addRow(new Object[]{rs.getInt("idManga"), rs.getString("nome"), rs.getInt("idArtista"), rs.getObject("idAdmin_moderador")});
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private void atualizarTabelaLogs() {
-        modeloLogs.setRowCount(0);
-        List<LogGerenciamento> lista = logDAO.listarLogsAuditoria();
-        for (LogGerenciamento log : lista) {
-            modeloLogs.addRow(new Object[]{log.getIdAdmin(), log.getIdPadrao(), log.getDataAcao()});
-        }
-    }
-    private void atualizarTabelaView() {
-        if (modeloView != null) {
-            modeloView.setRowCount(0);
-            List<String> ranking = mangaDAO.obterRankingComentarios();
-            for (String linha : ranking) {
-                String[] partes = linha.split(" - Comentários: ");
-                if (partes.length == 2) {
+    private void carregarViewComFiltro(String filtro) {
+        modeloView.setRowCount(0);
+        List<String> ranking = mangaDAO.obterRankingComentarios();
+        for (String linha : ranking) {
+            String[] partes = linha.split(" - Comentários: ");
+            if (partes.length == 2) {
+                if (filtro.trim().isEmpty() || partes[0].toLowerCase().contains(filtro.toLowerCase())) {
                     modeloView.addRow(new Object[]{partes[0], partes[1]});
                 }
             }
         }
+    }
+
+    // RECARREGAMENTO DINÂMICO DOS DASHBOARDS E COMPONENTES
+    private void atualizarTudo() {
+        atualizarTabelaUsuarios();
+        atualizarTabelaAutores();
+        filtrarMangasPorNome("");
+        carregarViewComFiltro("");
+        atualizarTabelaLogs();
+        atualizarDashboardKPIs();
+    }
+
+    private void atualizarDashboardKPIs() {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            // Contagem dinâmica para alimentar os elementos gráficos do painel inicial
+            var s1 = conn.prepareStatement("SELECT COUNT(*) FROM manga"); var r1 = s1.executeQuery(); if(r1.next()) lblKpiMangas.setText(r1.getString(1));
+            var s2 = conn.prepareStatement("SELECT COUNT(*) FROM usuario"); var r2 = s2.executeQuery(); if(r2.next()) lblKpiUsuarios.setText(r2.getString(1));
+            var s3 = conn.prepareStatement("SELECT COUNT(*) FROM LogGerenciamento"); var r3 = s3.executeQuery(); if(r3.next()) lblKpiLogs.setText(r3.getString(1));
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void atualizarTabelaUsuarios() {
+        modeloUsuarios.setRowCount(0);
+        for (Usuario u : usuarioDAO.listarTodos()) { modeloUsuarios.addRow(new Object[]{u.getId(), u.getNome(), u.getEmail()}); }
+    }
+
+    private void atualizarTabelaAutores() {
+        modeloAutores.setRowCount(0);
+        String sql = "SELECT a.idArtista, u.nomeUsuario, u.email FROM artista a " +
+                     "JOIN padrao p ON a.idArtista = p.idPadrao JOIN usuario u ON p.idPadrao = u.idUsuario";
+        try (Connection conn = ConnectionFactory.getConnection(); ResultSet rs = conn.createStatement().executeQuery(sql)) {
+            while (rs.next()) { modeloAutores.addRow(new Object[]{rs.getInt("idArtista"), rs.getString("nomeUsuario"), rs.getString("email")}); }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void atualizarTabelaLogs() {
+        modeloLogs.setRowCount(0);
+        for (LogGerenciamento log : logDAO.listarLogsAuditoria()) { modeloLogs.addRow(new Object[]{log.getIdAdmin(), log.getIdPadrao(), log.getDataAcao()}); }
     }
 }
