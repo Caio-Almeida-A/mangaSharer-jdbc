@@ -13,22 +13,32 @@ public class MangaDAO {
 
     // [CRUD - Create] Inserir novo mangá
     public void salvar(Manga manga) {
-        String sql = "INSERT INTO manga (idManga, nome, idArtista, idAdmin_moderador) VALUES (?, ?, ?, ?)";
+    // Removemos o idManga da query para o MySQL gerar sozinho
+        String sql = "INSERT INTO manga (nome, idArtista, idAdmin_moderador) VALUES (?, ?, ?)";
+        
         try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            PreparedStatement stmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             
-            stmt.setInt(1, manga.getId());
-            stmt.setString(2, manga.getNome());
-            stmt.setInt(3, manga.getIdArtista());
+            stmt.setString(1, manga.getNome());
+            stmt.setInt(2, manga.getIdArtista());
+            
             if (manga.getIdModerador() == null) {
-                stmt.setNull(4, java.sql.Types.INTEGER);
+                stmt.setNull(3, java.sql.Types.INTEGER);
             } else {
-                stmt.setInt(4, manga.getIdModerador());
+                stmt.setInt(3, manga.getIdModerador());
             }
+            
             stmt.executeUpdate();
-            System.out.println("Mangá salvo com sucesso!");
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao salvar mangá: ", e);
+            
+            // Recupera o ID que o AUTO_INCREMENT acabou de criar
+            try (ResultSet rs = stmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int idGerado = rs.getInt(1);
+                    System.out.println("Mangá cadastrado com sucesso! ID Gerado automaticamente: " + idGerado);
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            throw new RuntimeException("Erro ao salvar mangá via JDBC: ", e);
         }
     }
 
@@ -103,6 +113,34 @@ public class MangaDAO {
             System.out.println("Procedimento de balanceamento executado no banco!");
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao executar procedure com cursor: ", e);
+        }
+    }
+    public void deletar(int idManga) {
+        String sqlLer = "DELETE FROM ler WHERE idManga = ?";
+        String sqlManga = "DELETE FROM manga WHERE idManga = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement stL = conn.prepareStatement(sqlLer);
+                PreparedStatement stM = conn.prepareStatement(sqlManga)) {
+
+                // 1. Remove o histórico de avaliações do mangá
+                stL.setInt(1, idManga);
+                stL.executeUpdate();
+
+                // 2. Remove o mangá propriamente dito
+                stM.setInt(1, idManga);
+                stM.executeUpdate();
+
+                conn.commit();
+                System.out.println("Mangá e suas avaliações foram deletados!");
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao deletar mangá: ", e);
         }
     }
 }
