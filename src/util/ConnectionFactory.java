@@ -1,4 +1,4 @@
-package util; // Lembre-se de ajustar para apenas 'util'
+package util; 
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -6,8 +6,8 @@ import java.sql.SQLException;
 
 public class ConnectionFactory {
     // Configurações do seu banco de dados
-    private static final String URL = "jdbc:mysql://localhost:3306/manga_db2";
-    private static final String USER = "root"; 
+    private static final String URL = "jdbc:mysql://localhost:3306/manga_db2"; //Alterar db caso necessario
+    private static final String USER = "root"; // Alterar user caso necessario
     private static final String PASS = "rootLit123"; // Coloque a senha do seu MySQL
 
     public static Connection getConnection() {
